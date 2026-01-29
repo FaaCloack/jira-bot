@@ -16,6 +16,7 @@ import {
   addCommentToIssue,
 } from "./jira.usecase";
 import { formatIssueConfirmation, formatProposedAction, truncate } from "./jira.parsers";
+import { inferJiraAction } from "../services/ai.service";
 import { logger } from "../utils/logger";
 
 const MESSAGES = {
@@ -105,17 +106,26 @@ async function handleEpicSelection(
     "Fetched issues under Project"
   );
 
-  // TODO: Call AI to decide action based on:
-  // - state.forwardedMessage (original message)
-  // - result.epic (selected epic)
-  // - issues (candidate issues)
-  //
-  // For now, always propose creating a new task
+  const aiDecision = await inferJiraAction({
+    message: state.forwardedMessage || "",
+    project: result.epic.name,
+    candidates: issues,
+  });
+
+  logger.info({ chatId, aiDecision }, "AI decision received");
+
+  if (aiDecision.action === "none") {
+    await sendTextMessage(chatId, "No action needed for this message.");
+    clearConversation(chatId);
+    return;
+  }
 
   const proposedAction: ProposedAction = {
-    type: "create",
-    summary: truncate(state.forwardedMessage || "New task", 100),
-    description: state.forwardedMessage,
+    type: aiDecision.action,
+    issueKey: aiDecision.issueKey ?? undefined,
+    summary: aiDecision.summary || truncate(state.forwardedMessage || "New task", 100),
+    description: aiDecision.description || state.forwardedMessage,
+    comment: aiDecision.action === "comment" ? aiDecision.description : undefined,
   };
 
   updateConversation(chatId, {

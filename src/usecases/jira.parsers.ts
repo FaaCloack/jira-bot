@@ -8,7 +8,7 @@ export function formatIssueForDisplay(issue: JiraIssue): SimpleIssue {
     summary: issue.fields.summary,
     status: issue.fields.status.name,
     assignee: issue.fields.assignee?.displayName,
-    url: buildIssueUrl(issue.key),
+    description: issue.fields.description,
   };
 }
 
@@ -43,7 +43,7 @@ export function formatIssueConfirmation(
     commented: 'Added comment to',
   };
 
-  return `${actionText[action]}: *${issue.key}*\n${issue.summary}\nStatus: ${issue.status}\n\n${issue.url}`;
+  return `${actionText[action]}: *${issue.key}*\n${issue.summary}\nStatus: ${issue.status}\n\n${buildIssueUrl(issue.key)}`;
 }
 
 export function truncate(text: string, maxLength: number): string {

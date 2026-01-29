@@ -113,7 +113,7 @@ export interface SimpleIssue {
   summary: string;
   status: string;
   assignee?: string;
-  url: string;
+  description?: string | null;
 }
 
 export interface CreateIssueParams {
