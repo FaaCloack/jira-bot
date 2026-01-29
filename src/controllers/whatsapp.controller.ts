@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { WebhookPayload } from '../types/whatsapp';
 import { verifyWebhook, handleIncomingMessage } from '../usecases/whatsapp.usecase';
 import { parseWebhookMessage } from '../usecases/whatsapp.parsers';
+import { logger } from '../utils/logger';
 
 export interface WebhookVerifyQuery {
   'hub.mode': string;
@@ -18,12 +19,12 @@ export async function verifyWebhookController(
   const challenge = request.query['hub.challenge'];
 
   if (verifyWebhook(mode, token)) {
-    request.log.info('Webhook verified successfully');
+    logger.info('Webhook verified successfully');
     reply.code(200).send(challenge);
     return;
   }
 
-  request.log.warn({ mode, token }, 'Webhook verification failed');
+  logger.warn({ mode, token }, 'Webhook verification failed');
   reply.code(403).send('Forbidden');
 }
 
@@ -41,8 +42,8 @@ export async function handleWebhookController(
 
   const message = parseWebhookMessage(payload);
   if (message) {
-    handleIncomingMessage(message, request.log).catch((err) => {
-      request.log.error({ err }, 'Error handling message');
+    handleIncomingMessage(message).catch((err) => {
+      logger.error({ err }, 'Error handling message');
     });
   }
 }

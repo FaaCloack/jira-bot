@@ -4,7 +4,8 @@ import type {
   CreateIssueResponse,
   AddCommentRequest,
   JiraComment,
-} from '../types/jira';
+} from "../types/jira";
+import { logger } from "../utils/logger";
 
 function getConfig() {
   const baseUrl = process.env.JIRA_BASE_URL;
@@ -13,7 +14,7 @@ function getConfig() {
   const projectKey = process.env.JIRA_PROJECT_KEY;
 
   if (!baseUrl || !email || !apiToken || !projectKey) {
-    throw new Error('Missing Jira configuration');
+    throw new Error("Missing Jira configuration");
   }
 
   return { baseUrl, email, apiToken, projectKey };
@@ -21,19 +22,22 @@ function getConfig() {
 
 function getAuthHeader(): string {
   const { email, apiToken } = getConfig();
-  return `Basic ${Buffer.from(`${email}:${apiToken}`).toString('base64')}`;
+  return `Basic ${Buffer.from(`${email}:${apiToken}`).toString("base64")}`;
 }
 
-async function jiraFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+async function jiraFetch<T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<T> {
   const { baseUrl } = getConfig();
   const url = `${baseUrl}/rest/api/3${endpoint}`;
 
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Authorization': getAuthHeader(),
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Authorization: getAuthHeader(),
+      "Content-Type": "application/json",
+      Accept: "application/json",
       ...options.headers,
     },
   });
@@ -47,29 +51,48 @@ async function jiraFetch<T>(endpoint: string, options: RequestInit = {}): Promis
     return undefined as T;
   }
 
-  return response.json() as Promise<T>;
+  const result = await response.json();
+  logger.debug({ result }, "Jira API response");
+  return result as T;
 }
 
-async function searchIssues(jql: string, maxResults = 20): Promise<JiraSearchResult> {
-  const params = new URLSearchParams({
-    jql,
-    maxResults: maxResults.toString(),
-    fields: 'summary,status,issuetype,project,assignee,reporter,created,updated,priority,description',
+async function searchIssues(
+  jql: string,
+  maxResults = 20,
+): Promise<JiraSearchResult> {
+  return jiraFetch<JiraSearchResult>("/search/jql", {
+    method: "POST",
+    body: JSON.stringify({
+      jql,
+      maxResults,
+      fields: [
+        "summary",
+        "status",
+        "issuetype",
+        "project",
+        "assignee",
+        "reporter",
+        "created",
+        "updated",
+        "priority",
+        "description",
+      ],
+    }),
   });
-
-  return jiraFetch<JiraSearchResult>(`/search?${params}`);
 }
 
-export async function findEpicByName(epicName: string): Promise<JiraIssue | null> {
+export async function findEpicByName(
+  epicName: string,
+): Promise<JiraIssue | null> {
   const { projectKey } = getConfig();
-  const jql = `project = "${projectKey}" AND issuetype = Epic AND summary ~ "${epicName}" ORDER BY updated DESC`;
+  const jql = `project = "${projectKey}" AND issuetype = Project AND summary ~ "${epicName}" ORDER BY updated DESC`;
   const result = await searchIssues(jql, 1);
   return result.issues[0] || null;
 }
 
 export async function getIssuesUnderEpic(
   epicKey: string,
-  maxResults = 20
+  maxResults = 20,
 ): Promise<JiraSearchResult> {
   const { projectKey } = getConfig();
   const jql = `project = "${projectKey}" AND parent = "${epicKey}" ORDER BY updated DESC`;
@@ -84,7 +107,7 @@ export async function createIssueUnderEpic(
   epicKey: string,
   summary: string,
   description?: string,
-  issueType = 'Task'
+  issueType = "Task",
 ): Promise<CreateIssueResponse> {
   const { projectKey } = getConfig();
 
@@ -96,12 +119,12 @@ export async function createIssueUnderEpic(
       issuetype: { name: issueType },
       ...(description && {
         description: {
-          type: 'doc',
+          type: "doc",
           version: 1,
           content: [
             {
-              type: 'paragraph',
-              content: [{ type: 'text', text: description }],
+              type: "paragraph",
+              content: [{ type: "text", text: description }],
             },
           ],
         },
@@ -109,38 +132,41 @@ export async function createIssueUnderEpic(
     },
   };
 
-  return jiraFetch<CreateIssueResponse>('/issue', {
-    method: 'POST',
+  return jiraFetch<CreateIssueResponse>("/issue", {
+    method: "POST",
     body: JSON.stringify(request),
   });
 }
 
 export async function updateIssue(
   issueKey: string,
-  fields: Record<string, unknown>
+  fields: Record<string, unknown>,
 ): Promise<void> {
   await jiraFetch<void>(`/issue/${issueKey}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify({ fields }),
   });
 }
 
-export async function addComment(issueKey: string, commentText: string): Promise<JiraComment> {
+export async function addComment(
+  issueKey: string,
+  commentText: string,
+): Promise<JiraComment> {
   const request: AddCommentRequest = {
     body: {
-      type: 'doc',
+      type: "doc",
       version: 1,
       content: [
         {
-          type: 'paragraph',
-          content: [{ type: 'text', text: commentText }],
+          type: "paragraph",
+          content: [{ type: "text", text: commentText }],
         },
       ],
     },
   };
 
   return jiraFetch<JiraComment>(`/issue/${issueKey}/comment`, {
-    method: 'POST',
+    method: "POST",
     body: JSON.stringify(request),
   });
 }
