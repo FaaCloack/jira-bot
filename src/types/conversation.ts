@@ -1,23 +1,24 @@
-import { JiraProject } from "./jira";
+import type { SimpleEpic, SimpleIssue } from './jira';
 
 export type ConversationStep =
   | 'idle'
-  | 'awaiting_project_selection'
+  | 'awaiting_epic'
+  | 'processing'
   | 'awaiting_confirmation';
 
 export interface ProposedAction {
   type: 'create' | 'update' | 'comment';
-  issueKey?: string;        // For update/comment
-  summary?: string;         // For create
-  description?: string;     // For create/update
-  comment?: string;         // For comment
+  issueKey?: string;
+  summary?: string;
+  description?: string;
+  comment?: string;
 }
 
 export interface ConversationState {
   step: ConversationStep;
-  projects?: JiraProject[];
-  selectedProject?: string;
-  originalMessage?: string;
+  forwardedMessage?: string;
+  epic?: SimpleEpic;
+  candidateIssues?: SimpleIssue[];
   proposedAction?: ProposedAction;
   lastActivity: Date;
 }
