@@ -6,6 +6,10 @@ const requiredEnvVars = [
   'WHATSAPP_PHONE_NUMBER_ID',
   'WHATSAPP_ACCESS_TOKEN',
   'WHATSAPP_VERIFY_TOKEN',
+  'JIRA_BASE_URL',
+  'JIRA_EMAIL',
+  'JIRA_API_TOKEN',
+  'JIRA_PROJECT_KEY',
 ];
 
 for (const envVar of requiredEnvVars) {
