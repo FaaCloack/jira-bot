@@ -9,6 +9,7 @@
   "dependencies": {
     "dotenv": "^17.2.3",
     "fastify": "^4.26.0",
+    "openai": "^6.17.0",
     "pino": "^10.3.0"
   },
   "devDependencies": {

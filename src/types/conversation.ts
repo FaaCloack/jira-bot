@@ -22,3 +22,10 @@ export interface ConversationState {
   proposedAction?: ProposedAction;
   lastActivity: Date;
 }
+
+export type AiDecision = {
+  action: "create" | "update" | "comment" | "none";
+  issueKey: string | null;
+  summary: string;
+  description: string;
+};
